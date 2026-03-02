@@ -459,6 +459,20 @@
 		<script src="js/bootstrap.bundle.min.js"></script>
 		<script src="js/tiny-slider.js"></script>
 		<script src="js/custom.js"></script>
+
+		<script>
+document.getElementById('student-login').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const euid = document.getElementById('euid').value.trim().toLowerCase();
+  if (!/^e\d{8}$/.test(euid)) {
+    alert('Invalid EUID. Must start with "e" followed by 8 digits.');
+    return;
+  }
+  // Hide login form and show checkout form
+  document.getElementById('student-login').style.display = 'none';
+  document.getElementById('checkout-form').style.display = 'block';
+});
+</script>
 	</body>
 
 </html>
