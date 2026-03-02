@@ -424,9 +424,9 @@
 document.getElementById('student-login').addEventListener('submit', function(e) {
   e.preventDefault();
   const euid = document.getElementById('euid').value.trim().toLowerCase();
-  // Match 3 letters + 4 digits
+  // New regex: 3 letters + 4 digits
   if (!/^[a-z]{3}\d{4}$/.test(euid)) {
-    alert('Invalid EUID. Must be 3 letters followed by 4 digits, like aia0160.');
+    alert('Invalid EUID. Must be 3 letters followed by 4 digits.');
     return;
   }
   // Hide login form and show checkout form
