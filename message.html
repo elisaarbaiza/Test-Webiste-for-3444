@@ -114,18 +114,20 @@
 
   <div class="chat-container">
     <div class="chat-header">
-      <h1>Two‑Person Chat</h1>
-      <small class="text-muted">Real‑time chat between two people</small>
+      <div>
+        <h1>Messages</h1>
+        <small id="activeConversationLabel" class="text-muted">No conversation selected yet</small>
+      </div>
     </div>
 
     <div class="p-3 border-bottom bg-light">
-      <form id="nameForm" class="row g-2 align-items-center">
+      <form id="nameForm" class="row g-2 align-items-center mb-2">
         <div class="col-12 col-md-8">
           <input
             id="usernameInput"
             type="text"
             class="form-control"
-            placeholder="Enter your name (e.g. Bryan, Person A)"
+            placeholder="Enter your name (e.g. buyer or seller)"
             autocomplete="off"
             required
           >
@@ -134,11 +136,26 @@
           <button type="submit" class="btn btn-outline-primary">Set my name</button>
         </div>
       </form>
+      <form id="conversationForm" class="row g-2 align-items-center">
+        <div class="col-12 col-md-8">
+          <input
+            id="otherUserInput"
+            type="text"
+            class="form-control"
+            placeholder="Who do you want to chat with? (e.g. seller name)"
+            autocomplete="off"
+            required
+          >
+        </div>
+        <div class="col-12 col-md-4 d-grid">
+          <button type="submit" class="btn btn-secondary">Start / Open Chat</button>
+        </div>
+      </form>
       <small id="nameStatus" class="text-muted d-block mt-1"></small>
     </div>
 
     <div id="chatMessages" class="chat-messages">
-      <!-- Messages from all users will appear here -->
+      <!-- Messages for the current conversation will appear here -->
     </div>
 
     <div class="chat-input-area">
@@ -171,26 +188,32 @@
     const usernameInput = document.getElementById('usernameInput');
     const nameStatus = document.getElementById('nameStatus');
 
+    const conversationForm = document.getElementById('conversationForm');
+    const otherUserInput = document.getElementById('otherUserInput');
+    const activeConversationLabel = document.getElementById('activeConversationLabel');
+
     const chatForm = document.getElementById('chatForm');
     const messageInput = document.getElementById('messageInput');
     const chatMessages = document.getElementById('chatMessages');
 
     let username = "";
+    let currentConversationId = null;
+    let currentOtherUser = "";
 
     function formatTime(date) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    function addMessage(sender, text, isSelf) {
+    function addMessage(sender, text, isSelf, createdAt) {
       const wrapper = document.createElement('div');
       wrapper.className = 'message ' + (isSelf ? 'me' : 'them');
 
-      const now = new Date();
+      const time = createdAt ? new Date(createdAt) : new Date();
 
       wrapper.innerHTML = `
         <div class="sender">${sender}</div>
         <p class="message-text"></p>
-        <div class="message-time">${formatTime(now)}</div>
+        <div class="message-time">${formatTime(time)}</div>
       `;
 
       wrapper.querySelector('.message-text').textContent = text;
@@ -207,7 +230,23 @@
       username = value;
       usernameInput.disabled = true;
       this.querySelector('button[type="submit"]').disabled = true;
-      nameStatus.textContent = 'You are chatting as "' + username + '". Open this page on another device and set a different name for the other person.';
+      nameStatus.textContent = 'You are logged in as "' + username + '". Now choose who you want to chat with below.';
+    });
+
+    conversationForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!username) {
+        alert('Set your name first at the top.');
+        return;
+      }
+
+      const otherUser = otherUserInput.value.trim();
+      if (!otherUser) return;
+
+      socket.emit('join conversation', {
+        currentUser: username,
+        otherUser
+      });
     });
 
     chatForm.addEventListener('submit', function (e) {
@@ -221,6 +260,7 @@
       if (!text) return;
 
       socket.emit('chat message', {
+        conversationId: currentConversationId,
         user: username,
         text: text
       });
@@ -229,9 +269,28 @@
       messageInput.focus();
     });
 
+    socket.on('conversation joined', function (data) {
+      currentConversationId = data.conversationId;
+      currentOtherUser = data.otherUser;
+
+      // Clear current messages
+      chatMessages.innerHTML = '';
+
+      activeConversationLabel.textContent = 'Chatting with "' + currentOtherUser + '"';
+
+      (data.messages || []).forEach(function (msg) {
+        const isSelf = msg.sender === username;
+        addMessage(msg.sender, msg.text, isSelf, msg.createdAt);
+      });
+    });
+
     socket.on('chat message', function (data) {
+      if (!currentConversationId || data.conversationId !== currentConversationId) {
+        // Message for a different conversation; ignore in this view
+        return;
+      }
       const isSelf = data.user === username;
-      addMessage(data.user, data.text, isSelf);
+      addMessage(data.user, data.text, isSelf, data.createdAt);
     });
   </script>
 </body>
