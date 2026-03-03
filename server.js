@@ -6,10 +6,9 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// Allow Socket.IO connections from your Amplify site
 const io = new Server(server, {
   cors: {
-    origin: 'https://main.d3b9nx7tb3jlu.amplifyapp.com',
+    origin: '*',          
     methods: ['GET', 'POST']
   }
 });
