@@ -27,7 +27,7 @@
 	<body>
 
 		<!-- Start Header/Navigation -->
-		<nav class="custom-navbar navbar navbar navbar-expand-md navbar-dark bg-dark" arial-label="Furni navigation bar">
+		<nav class="custom-navbar navbar navbar navbar-expand-md navbar-dark bg-dark" arial-label="Eagl'd navigation bar">
 
 			<div class="container">
 				<a class="navbar-brand" href="index.html">Eagl'd<span>.</span></a>
@@ -80,28 +80,22 @@
 		      <div class="row mb-5">
 		        <div class="col-md-12">
 		          <div class="border p-4 rounded" role="alert">
-		            Returning customer? <a href="#">Click here</a> to login
-		          </div>
+  UNT Students Only – Please login with your EUID
+  <form id="student-login" class="mt-3">
+    <div class="mb-3">
+      <label for="euid" class="text-black">EUID <span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="euid" name="euid" placeholder="e12345678" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+  </form>
+</div>
 		        </div>
 		      </div>
 		      <div class="row">
 		        <div class="col-md-6 mb-5 mb-md-0">
 		          <h2 class="h3 mb-3 text-black">Billing Details</h2>
 		          <div class="p-3 p-lg-5 border bg-white">
-		            <div class="form-group">
-		              <label for="c_country" class="text-black">Country <span class="text-danger">*</span></label>
-		              <select id="c_country" class="form-control">
-		                <option value="1">Select a country</option>    
-		                <option value="2">bangladesh</option>    
-		                <option value="3">Algeria</option>    
-		                <option value="4">Afghanistan</option>    
-		                <option value="5">Ghana</option>    
-		                <option value="6">Albania</option>    
-		                <option value="7">Bahrain</option>    
-		                <option value="8">Colombia</option>    
-		                <option value="9">Dominican Republic</option>    
-		              </select>
-		            </div>
+		            
 		            <div class="form-group row">
 		              <div class="col-md-6">
 		                <label for="c_fname" class="text-black">First Name <span class="text-danger">*</span></label>
@@ -167,26 +161,16 @@
 		            </div>
 
 
-		            <div class="form-group">
-		              <label for="c_ship_different_address" class="text-black" data-bs-toggle="collapse" href="#ship_different_address" role="button" aria-expanded="false" aria-controls="ship_different_address"><input type="checkbox" value="1" id="c_ship_different_address"> Ship To A Different Address?</label>
-		              <div class="collapse" id="ship_different_address">
-		                <div class="py-2">
-
-		                  <div class="form-group">
-		                    <label for="c_diff_country" class="text-black">Country <span class="text-danger">*</span></label>
-		                    <select id="c_diff_country" class="form-control">
-		                      <option value="1">Select a country</option>    
-		                      <option value="2">bangladesh</option>    
-		                      <option value="3">Algeria</option>    
-		                      <option value="4">Afghanistan</option>    
-		                      <option value="5">Ghana</option>    
-		                      <option value="6">Albania</option>    
-		                      <option value="7">Bahrain</option>    
-		                      <option value="8">Colombia</option>    
-		                      <option value="9">Dominican Republic</option>    
-		                    </select>
-		                  </div>
-
+		          <div class="form-group">
+  <label for="c_meetup_location" class="text-black">Select Your Meet-Up Location <span class="text-danger">*</span></label>
+  <select id="c_meetup_location" class="form-control" required>
+    <option value="">Select a location</option>
+    <option value="willis_library">Willis Library</option>
+    <option value="union">Union</option>
+    <option value="blb_courtyard">BLB Courtyard</option>
+    <option value="eagle_landing">Eagle Landing</option>
+  </select>
+</div>
 
 		                  <div class="form-group row">
 		                    <div class="col-md-6">
@@ -196,35 +180,6 @@
 		                    <div class="col-md-6">
 		                      <label for="c_diff_lname" class="text-black">Last Name <span class="text-danger">*</span></label>
 		                      <input type="text" class="form-control" id="c_diff_lname" name="c_diff_lname">
-		                    </div>
-		                  </div>
-
-		                  <div class="form-group row">
-		                    <div class="col-md-12">
-		                      <label for="c_diff_companyname" class="text-black">Company Name </label>
-		                      <input type="text" class="form-control" id="c_diff_companyname" name="c_diff_companyname">
-		                    </div>
-		                  </div>
-
-		                  <div class="form-group row  mb-3">
-		                    <div class="col-md-12">
-		                      <label for="c_diff_address" class="text-black">Address <span class="text-danger">*</span></label>
-		                      <input type="text" class="form-control" id="c_diff_address" name="c_diff_address" placeholder="Street address">
-		                    </div>
-		                  </div>
-
-		                  <div class="form-group">
-		                    <input type="text" class="form-control" placeholder="Apartment, suite, unit etc. (optional)">
-		                  </div>
-
-		                  <div class="form-group row">
-		                    <div class="col-md-6">
-		                      <label for="c_diff_state_country" class="text-black">State / Country <span class="text-danger">*</span></label>
-		                      <input type="text" class="form-control" id="c_diff_state_country" name="c_diff_state_country">
-		                    </div>
-		                    <div class="col-md-6">
-		                      <label for="c_diff_postal_zip" class="text-black">Posta / Zip <span class="text-danger">*</span></label>
-		                      <input type="text" class="form-control" id="c_diff_postal_zip" name="c_diff_postal_zip">
 		                    </div>
 		                  </div>
 
@@ -253,19 +208,7 @@
 		        </div>
 		        <div class="col-md-6">
 
-		          <div class="row mb-5">
-		            <div class="col-md-12">
-		              <h2 class="h3 mb-3 text-black">Coupon Code</h2>
-		              <div class="p-3 p-lg-5 border bg-white">
-
-		                <label for="c_code" class="text-black mb-3">Enter your coupon code if you have one</label>
-		                <div class="input-group w-75 couponcode-wrap">
-		                  <input type="text" class="form-control me-2" id="c_code" placeholder="Coupon Code" aria-label="Coupon Code" aria-describedby="button-addon2">
-		                  <div class="input-group-append">
-		                    <button class="btn btn-black btn-sm" type="button" id="button-addon2">Apply</button>
-		                  </div>
-		                </div>
-
+		        
 		              </div>
 		            </div>
 		          </div>
@@ -298,36 +241,19 @@
 		                    </tr>
 		                  </tbody>
 		                </table>
+<div class="border p-3 mb-3">
+  <h3 class="h6 mb-0">Cash Payment</h3>
+  <div class="py-2">
+    <p class="mb-0">Bring exact cash to the meet-up location you selected above.</p>
+  </div>
+</div>
 
-		                <div class="border p-3 mb-3">
-		                  <h3 class="h6 mb-0"><a class="d-block" data-bs-toggle="collapse" href="#collapsebank" role="button" aria-expanded="false" aria-controls="collapsebank">Direct Bank Transfer</a></h3>
-
-		                  <div class="collapse" id="collapsebank">
-		                    <div class="py-2">
-		                      <p class="mb-0">Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order won’t be shipped until the funds have cleared in our account.</p>
-		                    </div>
-		                  </div>
-		                </div>
-
-		                <div class="border p-3 mb-3">
-		                  <h3 class="h6 mb-0"><a class="d-block" data-bs-toggle="collapse" href="#collapsecheque" role="button" aria-expanded="false" aria-controls="collapsecheque">Cheque Payment</a></h3>
-
-		                  <div class="collapse" id="collapsecheque">
-		                    <div class="py-2">
-		                      <p class="mb-0">Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order won’t be shipped until the funds have cleared in our account.</p>
-		                    </div>
-		                  </div>
-		                </div>
-
-		                <div class="border p-3 mb-5">
-		                  <h3 class="h6 mb-0"><a class="d-block" data-bs-toggle="collapse" href="#collapsepaypal" role="button" aria-expanded="false" aria-controls="collapsepaypal">Paypal</a></h3>
-
-		                  <div class="collapse" id="collapsepaypal">
-		                    <div class="py-2">
-		                      <p class="mb-0">Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order won’t be shipped until the funds have cleared in our account.</p>
-		                    </div>
-		                  </div>
-		                </div>
+<div class="border p-3 mb-5">
+  <h3 class="h6 mb-0">Cash App / Zelle</h3>
+  <div class="py-2">
+    <p class="mb-0">Send payment via Cash App or Zelle using your EUID as reference. Confirm payment with us before the meet-up.</p>
+  </div>
+</div>
 
 		                <div class="form-group">
 		                  <button class="btn btn-black btn-lg py-3 btn-block" onclick="window.location='thankyou.html'">Place Order</button>
@@ -376,7 +302,7 @@
 
 				<div class="row g-5 mb-5">
 					<div class="col-lg-4">
-						<div class="mb-4 footer-logo-wrap"><a href="#" class="footer-logo">Furni<span>.</span></a></div>
+						<div class="mb-4 footer-logo-wrap"><a href="#" class="footer-logo">Eagl'd<span>.</span></a></div>
 						<p class="mb-4">Donec facilisis quam ut purus rutrum lobortis. Donec vitae odio quis nisl dapibus malesuada. Nullam ac aliquet velit. Aliquam vulputate velit imperdiet dolor tempor tristique. Pellentesque habitant</p>
 
 						<ul class="list-unstyled custom-social">
@@ -452,6 +378,21 @@
 		<script src="js/bootstrap.bundle.min.js"></script>
 		<script src="js/tiny-slider.js"></script>
 		<script src="js/custom.js"></script>
+
+		<script>
+document.getElementById('student-login').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const euid = document.getElementById('euid').value.trim().toLowerCase();
+  // New regex: 3 letters + 4 digits
+  if (!/^[a-z]{3}\d{4}$/.test(euid)) {
+    alert('Invalid EUID. Must be 3 letters followed by 4 digits.');
+    return;
+  }
+  // Hide login form and show checkout form
+  document.getElementById('student-login').style.display = 'none';
+  document.getElementById('checkout-form').style.display = 'block';
+});
+</script>
 	</body>
 
 </html>
