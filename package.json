@@ -10,6 +10,7 @@
     "bcryptjs": "^3.0.3",
     "express": "latest",
     "express-session": "^1.19.0",
+    "nodemailer": "^8.0.1",
     "socket.io": "latest"
   }
 }

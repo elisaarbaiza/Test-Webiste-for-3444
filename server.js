@@ -4,6 +4,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +18,8 @@ app.use(express.urlencoded({ extended: true }));
 // In a real app, replace this with a real database.
 // users: [{ id, email, passwordHash, emailVerified }]
 const users = [];
+// verificationTokens: Map<token, userId>
+const verificationTokens = new Map();
 
 function isUntEmail(email) {
   const lower = String(email || '').toLowerCase().trim();
@@ -30,6 +34,26 @@ app.use(
     saveUninitialized: false,
   })
 );
+
+// Optional dev-only auto-login shortcut.
+// Enable by starting server with: SKIP_AUTH_FOR_DEV=true node server.js
+if (process.env.SKIP_AUTH_FOR_DEV === 'true') {
+  app.use((req, res, next) => {
+    if (!req.session.userId && users.length > 0) {
+      req.session.userId = users[0].id;
+    }
+    next();
+  });
+}
+
+// Email transport for verification emails (configure via env vars)
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // or your SMTP provider
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // Allow Socket.IO connections from any origin (Amplify, Render, localhost)
 const io = new Server(server, {
@@ -105,16 +129,31 @@ app.post('/signup', async (req, res) => {
     id: users.length + 1,
     email: email.trim(),
     passwordHash,
-    // For a real app, this should stay false until they click
-    // a link from a real email. For demo purposes we auto-verify.
-    emailVerified: true,
+    emailVerified: false,
   };
 
   users.push(newUser);
 
+  const token = crypto.randomBytes(32).toString('hex');
+  verificationTokens.set(token, newUser.id);
+
+  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const verifyUrl = `${baseUrl}/verify?token=${token}`;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: newUser.email,
+      subject: "Verify your UNT email for Eagl'd",
+      text: `Click this link to verify your email: ${verifyUrl}`,
+    });
+  } catch (err) {
+    console.error('Error sending verification email:', err);
+    return res.status(500).json({ error: 'Could not send verification email.' });
+  }
+
   res.json({
-    message: 'Signup successful. UNT email accepted.',
-    emailVerified: newUser.emailVerified,
+    message: 'Signup successful. Check your UNT email for a verification link.',
   });
 });
 
@@ -158,6 +197,25 @@ app.post('/logout', (req, res) => {
   req.session.destroy(() => {
     res.json({ message: 'Logged out.' });
   });
+
+// Email verification endpoint
+app.get('/verify', (req, res) => {
+  const { token } = req.query || {};
+  const userId = verificationTokens.get(token);
+  if (!userId) {
+    return res.status(400).send('Invalid or expired verification link.');
+  }
+
+  const user = users.find((u) => u.id === userId);
+  if (!user) {
+    return res.status(400).send('User not found.');
+  }
+
+  user.emailVerified = true;
+  verificationTokens.delete(token);
+
+  res.send('Email verified. You can now log in.');
+});
 });
 
 // Example protected route (for future sell/buy/chat actions)
