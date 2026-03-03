@@ -20,6 +20,8 @@ app.use(express.urlencoded({ extended: true }));
 const users = [];
 // verificationTokens: Map<token, userId>
 const verificationTokens = new Map();
+// passwordResetTokens: Map<token, userId>
+const passwordResetTokens = new Map();
 
 function isUntEmail(email) {
   const lower = String(email || '').toLowerCase().trim();
@@ -216,6 +218,70 @@ app.get('/verify', (req, res) => {
   verificationTokens.delete(token);
 
   res.send('Email verified. You can now log in.');
+});
+
+// Forgot password - send reset link
+app.post('/forgot-password', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+
+  const user = users.find(
+    (u) => u.email.toLowerCase().trim() === String(email).toLowerCase().trim()
+  );
+
+  // For security, always return success even if user not found
+  if (!user) {
+    return res.json({
+      message: 'If that email is registered, a reset link has been sent.',
+    });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  passwordResetTokens.set(token, user.id);
+
+  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const resetUrl = `${baseUrl}/reset-password.html?token=${token}`;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "Reset your Eagl'd password",
+      text: `Click this link to reset your password: ${resetUrl}`,
+    });
+  } catch (err) {
+    console.error('Error sending reset email:', err);
+    return res.status(500).json({ error: 'Could not send reset email.' });
+  }
+
+  res.json({
+    message: 'If that email is registered, a reset link has been sent.',
+  });
+});
+
+// Reset password
+app.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body || {};
+  if (!token || !password) {
+    return res.status(400).json({ error: 'Token and new password are required.' });
+  }
+
+  const userId = passwordResetTokens.get(token);
+  if (!userId) {
+    return res.status(400).json({ error: 'Invalid or expired reset link.' });
+  }
+
+  const user = users.find((u) => u.id === userId);
+  if (!user) {
+    return res.status(400).json({ error: 'User not found.' });
+  }
+
+  user.passwordHash = await bcrypt.hash(password, 10);
+  passwordResetTokens.delete(token);
+
+  res.json({ message: 'Password has been reset.' });
 });
 
 // Example protected route (for future sell/buy/chat actions)
