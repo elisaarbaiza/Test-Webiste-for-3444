@@ -141,27 +141,29 @@ app.post('/signup', async (req, res) => {
       .json({ error: 'You must use a UNT email (@my.unt.edu or @unt.edu).' });
   }
 
-  const existing = users.find(
+  let user = users.find(
     (u) => u.email.toLowerCase().trim() === email.toLowerCase().trim()
   );
 
-  if (existing) {
-    return res.status(400).json({ error: 'This email is already registered.' });
-  }
-
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const newUser = {
-    id: users.length + 1,
-    email: email.trim(),
-    passwordHash,
-    emailVerified: false,
-  };
-
-  users.push(newUser);
+  if (!user) {
+    // First time this UNT email is registering
+    user = {
+      id: users.length + 1,
+      email: email.trim(),
+      passwordHash,
+      emailVerified: false,
+    };
+    users.push(user);
+  } else {
+    // Email already seen before: update password and re-send verification link
+    user.passwordHash = passwordHash;
+    user.emailVerified = false;
+  }
 
   const token = crypto.randomBytes(32).toString('hex');
-  verificationTokens.set(token, newUser.id);
+  verificationTokens.set(token, user.id);
 
   const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const verifyUrl = `${baseUrl}/verify?token=${token}`;
@@ -169,7 +171,7 @@ app.post('/signup', async (req, res) => {
   try {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
-      to: newUser.email,
+      to: user.email,
       subject: "Verify your UNT email for Eagl'd",
       text: `Click this link to verify your email: ${verifyUrl}`,
     });
