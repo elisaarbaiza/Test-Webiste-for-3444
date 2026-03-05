@@ -209,11 +209,20 @@ app.post('/signup', async (req, res) => {
     });
   } catch (err) {
     console.error('Error sending verification email:', err);
-    return res.status(500).json({ error: 'Could not send verification email.' });
+    // On local dev, surface the error so you can debug.
+    if (process.env.NODE_ENV !== 'production') {
+      return res.status(500).json({ error: 'Could not send verification email.' });
+    }
+    // On the deployed demo (Render), don't block signup if email can't be sent.
+    // Mark the email as verified so users can still log in.
+    user.emailVerified = true;
   }
 
   res.json({
-    message: 'Signup successful. Check your UNT email for a verification link.',
+    message:
+      process.env.NODE_ENV === 'production'
+        ? 'Signup successful. (Email verification skipped on the live site due to email issues.)'
+        : 'Signup successful. Check your UNT email for a verification link.',
   });
 });
 
