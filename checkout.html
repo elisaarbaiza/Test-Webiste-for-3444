@@ -80,16 +80,6 @@
 		    <div class="container">
 		      <div class="row mb-5">
 		        <div class="col-md-12">
-		          <div class="border p-4 rounded" role="alert">
-  UNT Students Only – Please login with your EUID
-  <form id="student-login" class="mt-3">
-    <div class="mb-3">
-      <label for="euid" class="text-black">EUID <span class="text-danger">*</span></label>
-      <input type="text" class="form-control" id="euid" name="euid" placeholder="e12345678" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Login</button>
-  </form>
-</div>
 		        </div>
 		      </div>
 		      <div class="row">
@@ -367,21 +357,6 @@
 		<script src="js/bootstrap.bundle.min.js"></script>
 		<script src="js/tiny-slider.js"></script>
 		<script src="js/custom.js"></script>
-
-		<script>
-document.getElementById('student-login').addEventListener('submit', function(e) {
-  e.preventDefault();
-  const euid = document.getElementById('euid').value.trim().toLowerCase();
-
-  if (!/^[a-z]{3}\d{4}$/.test(euid)) {
-    alert('Invalid EUID. Must be 3 letters followed by 4 digits.');
-    return;
-  }
-
-  document.getElementById('student-login').style.display = 'none';
-  document.getElementById('checkout-form').style.display = 'block';
-});
-</script>
 
 <script>
 const paymentOptions = document.querySelectorAll('input[name="payment_method"]');
