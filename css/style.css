@@ -752,3 +752,47 @@ textarea {
 .favorite-share a.favorite-share-link {
   word-break: break-all;
 }
+
+.favorites-empty-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px dashed rgba(59, 93, 80, 0.35);
+}
+
+.favorites-empty-title {
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.favorites-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1080;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 12px 16px;
+  background: #2f3e46;
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.favorites-toast-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.favorites-toast .favorites-toast-undo {
+  color: #a8dadc !important;
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.favorites-toast .favorites-toast-undo:hover {
+  color: #fff !important;
+  text-decoration: underline;
+}
