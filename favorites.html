@@ -71,10 +71,18 @@
   <!-- Start Favorites Section -->
   <div class="untree_co-section before-footer-section">
     <div class="container">
-      <div class="row">
+      <div class="row" id="favorites-list-row">
+
+        <div id="favorites-empty-state" class="col-12 mb-4 d-none" role="status" aria-live="polite">
+          <div class="favorites-empty-card text-center py-5 px-4">
+            <p class="favorites-empty-title mb-2">No favorites yet</p>
+            <p class="text-muted mb-4">Save items you like from the shop—they’ll show up here. When listings come from other students, they’ll appear the same way.</p>
+            <a href="shop.html" class="btn btn-primary">Browse the shop</a>
+          </div>
+        </div>
 
         <!-- Example Favorite Item 1 -->
-        <div class="col-12 mb-4">
+        <div class="col-12 mb-4 favorite-item-col">
           <div class="favorite-item d-flex align-items-start" data-product-id="nordic-chair" data-product-name="Nordic Chair">
             <button type="button" class="favorite-heart btn btn-link p-0 me-3" aria-label="Unfavorite Nordic Chair">
               <i class="fa fa-heart"></i>
@@ -102,7 +110,7 @@
         </div>
 
         <!-- Example Favorite Item 2 -->
-        <div class="col-12 mb-4">
+        <div class="col-12 mb-4 favorite-item-col">
           <div class="favorite-item d-flex align-items-start" data-product-id="kruzo-aero-chair" data-product-name="Kruzo Aero Chair">
             <button type="button" class="favorite-heart btn btn-link p-0 me-3" aria-label="Unfavorite Kruzo Aero Chair">
               <i class="fa fa-heart"></i>
@@ -130,7 +138,7 @@
         </div>
 
         <!-- Example Favorite Item 3 -->
-        <div class="col-12 mb-4">
+        <div class="col-12 mb-4 favorite-item-col">
           <div class="favorite-item d-flex align-items-start" data-product-id="logic-design-textbook" data-product-name="Logic Design Textbook">
             <button type="button" class="favorite-heart btn btn-link p-0 me-3" aria-label="Unfavorite Logic Design Textbook">
               <i class="fa fa-heart"></i>
@@ -258,7 +266,14 @@
 
     </div>
   </footer>
-  <!-- End Footer Section -->	
+  <!-- End Footer Section -->
+
+  <div id="favorites-toast" class="favorites-toast d-none" role="status" aria-live="polite" aria-atomic="true">
+    <div class="favorites-toast-inner">
+      <span class="favorites-toast-message" id="favorites-toast-message"></span>
+      <button type="button" class="btn btn-sm btn-link favorites-toast-undo p-0 ms-3" id="favorites-toast-undo">Undo</button>
+    </div>
+  </div>
 
   <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/tiny-slider.js"></script>

@@ -13,9 +13,13 @@ const app = express();
 const server = http.createServer(app);
 
 // Postgres connection pool (for future persistence)
+// Use DATABASE_SSL=true when connecting locally to hosted databases like Render Postgres.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl:
+    process.env.DATABASE_SSL === 'true' || process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
 async function initDb() {
@@ -38,6 +42,22 @@ async function initDb() {
       description TEXT,
       price NUMERIC(10, 2) NOT NULL,
       category TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS verification_tokens (
+      token TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      token TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
   `);
@@ -65,18 +85,28 @@ app.use(
   })
 );
 
-// Simple in-memory "database" for demo purposes
-// In a real app, replace this with a real database.
-// users: [{ id, email, passwordHash, emailVerified }]
-const users = [];
-// verificationTokens: Map<token, userId>
-const verificationTokens = new Map();
-// passwordResetTokens: Map<token, userId>
-const passwordResetTokens = new Map();
-
 function isUntEmail(email) {
   const lower = String(email || '').toLowerCase().trim();
   return lower.endsWith('@my.unt.edu') || lower.endsWith('@unt.edu');
+}
+
+async function getUserById(id) {
+  const result = await pool.query(
+    `SELECT id, email, password_hash, email_verified FROM users WHERE id = $1 LIMIT 1`,
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
+async function getUserByEmail(email) {
+  const result = await pool.query(
+    `SELECT id, email, password_hash, email_verified
+     FROM users
+     WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
+     LIMIT 1`,
+    [email]
+  );
+  return result.rows[0] || null;
 }
 
 // Session middleware to track logged-in users
@@ -96,20 +126,37 @@ app.use(
 // Optional dev-only auto-login shortcut.
 // Enable by starting server with: SKIP_AUTH_FOR_DEV=true node server.js
 if (process.env.SKIP_AUTH_FOR_DEV === 'true') {
-  app.use((req, res, next) => {
-    if (!req.session.userId && users.length > 0) {
-      req.session.userId = users[0].id;
+  app.use(async (req, res, next) => {
+    try {
+      if (!req.session.userId) {
+        const result = await pool.query(
+          `SELECT id FROM users ORDER BY id ASC LIMIT 1`
+        );
+        if (result.rows[0]) {
+          req.session.userId = result.rows[0].id;
+        }
+      }
+      next();
+    } catch (err) {
+      next(err);
     }
-    next();
   });
 }
 
 // Email transport for verification emails (configure via env vars)
+// Uses Amazon SES SMTP. You should set these env vars on Render:
+// - EMAIL_USER: the verified "from" email identity in SES
+// - SES_SMTP_USERNAME: SMTP username from SES
+// - SES_SMTP_PASSWORD: SMTP password from SES
+// - SES_REGION: SES region (defaults to us-west-2 / Oregon)
+const sesRegion = process.env.SES_REGION || 'us-west-2';
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // or your SMTP provider
+  host: `email-smtp.${sesRegion}.amazonaws.com`,
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.SES_SMTP_USERNAME,
+    pass: process.env.SES_SMTP_PASSWORD,
   },
 });
 
@@ -148,15 +195,19 @@ function ensureConversation(currentUser, otherUser) {
 }
 
 // Authentication helpers
-function requireLogin(req, res, next) {
-  const user = users.find((u) => u.id === req.session.userId);
-  if (!user || !user.emailVerified) {
-    return res.status(401).json({
-      error: 'Login with a verified UNT email is required for this action.',
-    });
+async function requireLogin(req, res, next) {
+  try {
+    const user = await getUserById(req.session.userId);
+    if (!user || !user.email_verified) {
+      return res.status(401).json({
+        error: 'Login with a verified UNT email is required for this action.',
+      });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
   }
-  req.user = user;
-  next();
 }
 
 // Sign up with UNT email
@@ -173,29 +224,35 @@ app.post('/signup', async (req, res) => {
       .json({ error: 'You must use a UNT email (@my.unt.edu or @unt.edu).' });
   }
 
-  let user = users.find(
-    (u) => u.email.toLowerCase().trim() === email.toLowerCase().trim()
-  );
-
   const passwordHash = await bcrypt.hash(password, 10);
+  const normalizedEmail = email.trim().toLowerCase();
+  let user = await getUserByEmail(normalizedEmail);
 
   if (!user) {
-    // First time this UNT email is registering
-    user = {
-      id: users.length + 1,
-      email: email.trim(),
-      passwordHash,
-      emailVerified: false,
-    };
-    users.push(user);
+    const insertResult = await pool.query(
+      `INSERT INTO users (email, password_hash, email_verified)
+       VALUES ($1, $2, false)
+       RETURNING id, email, password_hash, email_verified`,
+      [normalizedEmail, passwordHash]
+    );
+    user = insertResult.rows[0];
   } else {
-    // Email already seen before: update password and re-send verification link
-    user.passwordHash = passwordHash;
-    user.emailVerified = false;
+    const updateResult = await pool.query(
+      `UPDATE users
+       SET password_hash = $1, email_verified = false
+       WHERE id = $2
+       RETURNING id, email, password_hash, email_verified`,
+      [passwordHash, user.id]
+    );
+    user = updateResult.rows[0];
+    await pool.query(`DELETE FROM verification_tokens WHERE user_id = $1`, [user.id]);
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  verificationTokens.set(token, user.id);
+  await pool.query(
+    `INSERT INTO verification_tokens (token, user_id) VALUES ($1, $2)`,
+    [token, user.id]
+  );
 
   const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const verifyUrl = `${baseUrl}/verify?token=${token}`;
@@ -209,20 +266,11 @@ app.post('/signup', async (req, res) => {
     });
   } catch (err) {
     console.error('Error sending verification email:', err);
-    // On local dev, surface the error so you can debug.
-    if (process.env.NODE_ENV !== 'production') {
-      return res.status(500).json({ error: 'Could not send verification email.' });
-    }
-    // On the deployed demo (Render), don't block signup if email can't be sent.
-    // Mark the email as verified so users can still log in.
-    user.emailVerified = true;
+    return res.status(500).json({ error: 'Could not send verification email.' });
   }
 
   res.json({
-    message:
-      process.env.NODE_ENV === 'production'
-        ? 'Signup successful. (Email verification skipped on the live site due to email issues.)'
-        : 'Signup successful. Check your UNT email for a verification link.',
+    message: 'Signup successful. Check your UNT email for a verification link.',
   });
 });
 
@@ -234,20 +282,18 @@ app.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
-  const user = users.find(
-    (u) => u.email.toLowerCase().trim() === email.toLowerCase().trim()
-  );
+  const user = await getUserByEmail(email);
 
   if (!user) {
     return res.status(400).json({ error: 'Invalid email or password.' });
   }
 
-  const ok = await bcrypt.compare(password, user.passwordHash);
+  const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) {
     return res.status(400).json({ error: 'Invalid email or password.' });
   }
 
-  if (!user.emailVerified) {
+  if (!user.email_verified) {
     return res
       .status(403)
       .json({ error: 'Please verify your UNT email before logging in.' });
@@ -269,20 +315,24 @@ app.post('/logout', (req, res) => {
 });
 
 // Email verification endpoint
-app.get('/verify', (req, res) => {
+app.get('/verify', async (req, res) => {
   const { token } = req.query || {};
-  const userId = verificationTokens.get(token);
-  if (!userId) {
+  const tokenResult = await pool.query(
+    `SELECT token, user_id FROM verification_tokens WHERE token = $1 LIMIT 1`,
+    [token]
+  );
+  const tokenRow = tokenResult.rows[0];
+  if (!tokenRow) {
     return res.status(400).send('Invalid or expired verification link.');
   }
 
-  const user = users.find((u) => u.id === userId);
+  const user = await getUserById(tokenRow.user_id);
   if (!user) {
     return res.status(400).send('User not found.');
   }
 
-  user.emailVerified = true;
-  verificationTokens.delete(token);
+  await pool.query(`UPDATE users SET email_verified = true WHERE id = $1`, [user.id]);
+  await pool.query(`DELETE FROM verification_tokens WHERE token = $1`, [token]);
 
   res.send('Email verified. You can now log in.');
 });
@@ -294,9 +344,7 @@ app.post('/forgot-password', async (req, res) => {
     return res.status(400).json({ error: 'Email is required.' });
   }
 
-  const user = users.find(
-    (u) => u.email.toLowerCase().trim() === String(email).toLowerCase().trim()
-  );
+  const user = await getUserByEmail(email);
 
   // For security, always return success even if user not found
   if (!user) {
@@ -306,7 +354,11 @@ app.post('/forgot-password', async (req, res) => {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  passwordResetTokens.set(token, user.id);
+  await pool.query(`DELETE FROM password_reset_tokens WHERE user_id = $1`, [user.id]);
+  await pool.query(
+    `INSERT INTO password_reset_tokens (token, user_id) VALUES ($1, $2)`,
+    [token, user.id]
+  );
 
   const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const resetUrl = `${baseUrl}/reset-password.html?token=${token}`;
@@ -335,18 +387,26 @@ app.post('/reset-password', async (req, res) => {
     return res.status(400).json({ error: 'Token and new password are required.' });
   }
 
-  const userId = passwordResetTokens.get(token);
-  if (!userId) {
+  const tokenResult = await pool.query(
+    `SELECT token, user_id FROM password_reset_tokens WHERE token = $1 LIMIT 1`,
+    [token]
+  );
+  const tokenRow = tokenResult.rows[0];
+  if (!tokenRow) {
     return res.status(400).json({ error: 'Invalid or expired reset link.' });
   }
 
-  const user = users.find((u) => u.id === userId);
+  const user = await getUserById(tokenRow.user_id);
   if (!user) {
     return res.status(400).json({ error: 'User not found.' });
   }
 
-  user.passwordHash = await bcrypt.hash(password, 10);
-  passwordResetTokens.delete(token);
+  const passwordHash = await bcrypt.hash(password, 10);
+  await pool.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [
+    passwordHash,
+    user.id,
+  ]);
+  await pool.query(`DELETE FROM password_reset_tokens WHERE token = $1`, [token]);
 
   res.json({ message: 'Password has been reset.' });
 });
