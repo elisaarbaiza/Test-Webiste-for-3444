@@ -57,46 +57,58 @@
   </div>
 
   <script>
-    // Backend base URL for Amplify frontend
-    const API_BASE = 'https://test-webiste-for-3444.onrender.com';
+    const ACCOUNTS_KEY = 'eagld_demo_accounts';
+    const DEMO_USER_ID = '1';
+
+    function getAccounts() {
+      try {
+        return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '{}');
+      } catch (_err) {
+        return {};
+      }
+    }
 
     const loginForm = document.getElementById('loginForm');
     const loginAlert = document.getElementById('loginAlert');
 
-    loginForm.addEventListener('submit', async (e) => {
+    loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
       loginAlert.className = 'alert d-none';
       loginAlert.textContent = '';
 
-      const email = document.getElementById('loginEmail').value.trim();
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
       const rememberMe = document.getElementById('rememberMe').checked;
+      const accounts = getAccounts();
+      const account = accounts[email];
 
-      try {
-        const res = await fetch(`${API_BASE}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ email, password, rememberMe})
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          loginAlert.className = 'alert alert-danger';
-          loginAlert.textContent = data.error || 'Login failed.';
-        } else {
-          loginAlert.className = 'alert alert-success';
-          loginAlert.textContent = 'Logged in successfully. Redirecting...';
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 1000);
-        }
-      } catch (err) {
+      if (!account || account.password !== password) {
         loginAlert.className = 'alert alert-danger';
-        loginAlert.textContent = 'Network error. Please try again.';
+        loginAlert.textContent = 'Invalid email or password.';
+        return;
       }
+
+      // Demo auth only: unlocks feature gating that relies on localStorage user_id.
+      localStorage.setItem('user_id', DEMO_USER_ID);
+      localStorage.setItem('user_email', email);
+      if (rememberMe) {
+        localStorage.setItem('remember_me_email', email);
+      } else {
+        localStorage.removeItem('remember_me_email');
+      }
+
+      loginAlert.className = 'alert alert-success';
+      loginAlert.textContent = 'Logged in successfully. Redirecting...';
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 700);
     });
+
+    const rememberedEmail = localStorage.getItem('remember_me_email');
+    if (rememberedEmail) {
+      document.getElementById('loginEmail').value = rememberedEmail;
+      document.getElementById('rememberMe').checked = true;
+    }
   </script>
 
   <script src="js/bootstrap.bundle.min.js"></script>
