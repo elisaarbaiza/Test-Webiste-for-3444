@@ -48,60 +48,51 @@
     </p>
   </div>
 
-  <script>
-    const ACCOUNTS_KEY = 'eagld_demo_accounts';
+  <script type="module">
+    import {
+      auth,
+      createUserWithEmailAndPassword,
+      sendEmailVerification,
+      signOut
+    } from "./js/firebase-auth.js";
 
-    function getAccounts() {
-      try {
-        return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '{}');
-      } catch (_err) {
-        return {};
-      }
-    }
+    const signupForm = document.getElementById("signupForm");
+    const signupAlert = document.getElementById("signupAlert");
 
-    function saveAccounts(accounts) {
-      localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-    }
-
-    const signupForm = document.getElementById('signupForm');
-    const signupAlert = document.getElementById('signupAlert');
-
-    signupForm.addEventListener('submit', (e) => {
+    signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      signupAlert.className = 'alert d-none';
-      signupAlert.textContent = '';
+      signupAlert.className = "alert d-none";
+      signupAlert.textContent = "";
 
-      const email = document.getElementById('signupEmail').value.trim().toLowerCase();
-      const password = document.getElementById('signupPassword').value;
-      const confirm = document.getElementById('signupPasswordConfirm').value;
+      const email = document.getElementById("signupEmail").value.trim().toLowerCase();
+      const password = document.getElementById("signupPassword").value;
+      const confirm = document.getElementById("signupPasswordConfirm").value;
 
       if (password !== confirm) {
-        signupAlert.className = 'alert alert-danger';
-        signupAlert.textContent = 'Passwords do not match.';
+        signupAlert.className = "alert alert-danger";
+        signupAlert.textContent = "Passwords do not match.";
         return;
       }
 
-      if (!email.endsWith('@my.unt.edu')) {
-        signupAlert.className = 'alert alert-danger';
-        signupAlert.textContent = 'Please use a UNT email address.';
+      if (!email.endsWith("@my.unt.edu")) {
+        signupAlert.className = "alert alert-danger";
+        signupAlert.textContent = "Please use a UNT email address.";
         return;
       }
 
-      const accounts = getAccounts();
-      if (accounts[email]) {
-        signupAlert.className = 'alert alert-danger';
-        signupAlert.textContent = 'An account with this email already exists.';
-        return;
+      try {
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(credential.user);
+        await signOut(auth);
+        signupAlert.className = "alert alert-success";
+        signupAlert.textContent = "Account created. Check your UNT inbox to verify your email before logging in.";
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 1500);
+      } catch (err) {
+        signupAlert.className = "alert alert-danger";
+        signupAlert.textContent = err?.message || "Could not create account.";
       }
-
-      accounts[email] = { password };
-      saveAccounts(accounts);
-
-      signupAlert.className = 'alert alert-success';
-      signupAlert.textContent = 'Demo account created. Redirecting to login...';
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 900);
     });
   </script>
 

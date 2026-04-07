@@ -1,12 +1,12 @@
+import { auth, onAuthStateChanged } from "./firebase-auth.js";
+
 (() => {
-  const requiresAuth = document.currentScript?.dataset?.protectPage !== undefined;
-  if (!requiresAuth) return;
+  onAuthStateChanged(auth, (user) => {
+    if (user) return;
 
-  const userId = localStorage.getItem("user_id");
-  if (userId) return;
-
-  const currentPath = window.location.pathname;
-  const currentPage = currentPath.split("/").pop() || "main.html";
-  const safeNext = encodeURIComponent(currentPage);
-  window.location.replace(`login.html?next=${safeNext}`);
+    const currentPath = window.location.pathname;
+    const currentPage = currentPath.split("/").pop() || "main.html";
+    const safeNext = encodeURIComponent(currentPage);
+    window.location.replace(`login.html?next=${safeNext}`);
+  });
 })();
