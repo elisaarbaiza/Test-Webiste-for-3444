@@ -106,18 +106,7 @@
 		              </div>
 		            </div>
 
-		            <div class="form-group">
-		              <label for="c_create_account" class="text-black" data-bs-toggle="collapse" href="#create_an_account" role="button" aria-expanded="false" aria-controls="create_an_account"><input type="checkbox" value="1" id="c_create_account"> Create an account?</label>
-		              <div class="collapse" id="create_an_account">
-		                <div class="py-2 mb-4">
-		                  <p class="mb-3">Create an account by entering the information below. If you are a returning customer please login at the top of the page.</p>
-		                  <div class="form-group">
-		                    <label for="c_account_password" class="text-black">Account Password</label>
-		                    <input type="email" class="form-control" id="c_account_password" name="c_account_password" placeholder="">
-		                  </div>
-		                </div>
-		              </div>
-		            </div>
+		        
 
 
 		          <div class="form-group">
@@ -130,6 +119,16 @@
     <option value="eagle_landing">Eagle Landing</option>
   </select>
 </div>
+<div class="form-group">
+  <label for="c_meetup_date" class="text-black">Preferred Date <span class="text-danger">*</span></label>
+  <input type="date" id="c_meetup_date" name="c_meetup_date" class="form-control" required>
+</div>
+
+<div class="form-group">
+  <label for="c_meetup_time" class="text-black">Preferred Time <span class="text-danger">*</span></label>
+  <input type="time" id="c_meetup_time" name="c_meetup_time" class="form-control" required>
+</div>
+
 
 		                  <div class="form-group row">
 		                    <div class="col-md-6">
