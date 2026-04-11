@@ -16,12 +16,12 @@
     		<nav class="custom-navbar navbar navbar navbar-expand-md navbar-dark bg-dark" arial-label="Furni navigation bar">
 
 			<div class="container">
-				<a class="navbar-brand" href="main.html">Eagl'd<span>.</span></a>
+				<a class="navbar-brand" href="/">Eagl'd<span>.</span></a>
 				
 				<!-- Search Bar -->
 				<div class="search-container">
             		<input type="text" id="searchInput" placeholder="Search for anything">
-            		<button class="search-btn"><i class="fas fa-search"></i></button>
+            		<button class="search-btn" id="searchBtn"><i class="fas fa-search"></i></button>
         		</div>
 
 				<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsFurni" aria-controls="navbarsFurni" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,18 +31,18 @@
 				<!-- Navigation Links -->
 				<div class="collapse navbar-collapse" id="navbarsFurni">
 					<ul class="custom-navbar-nav navbar-nav ms-auto mb-2 mb-md-0">
-						<li class="nav-item active"><a class="nav-link" href="main.html">Home</a></li>
-						<li><a class="nav-link" href="/shop">Shop</a></li>
-						<li><a class="nav-link" href="/favorites">Favorites</a></li>
-						<li><a class="nav-link" href="/sell">Sell</a></li>
+						<li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+						<li class="nav-item"><a class="nav-link" href="/shop">Shop</a></li>
+						<li class="nav-item"><a class="nav-link" href="/favorites">Favorites</a></li>
+						<li class="nav-item"><a class="nav-link" href="/sell">Sell</a></li>
 						
 					</ul>
 
 					<!-- CTA Buttons -->
 					<ul class="custom-navbar-cta navbar-nav mb-2 mb-md-0 ms-5">
-						<li><a class="nav-link" href="message.html"><img src="message.png" alt="Messages"></a></li>
-						<li><a class="nav-link" href="profile.html"><img src="user.svg" alt="Profile"></a></li>
-						<li><a class="nav-link" href="cart.html"><img src="cart.svg" alt="Cart"></a></li>
+						<li id="nav-messages" style="display: none;"><a class="nav-link" href="message.html"><img src="message.png" alt="Messages"></a></li>
+						<li><a class="btn btn-secondary" id="nav-profile" href="/login" style="padding: 8px 20px; font-size: 14px; margin-top: 3px;">Log In / Signup</a></li>
+						<li id="nav-cart" style="display: none;"><a class="nav-link" href="cart.html"><img src="cart.svg" alt="Cart"></a></li>
 					</ul>
 				</div>
 			</div>
@@ -54,6 +54,46 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
+    <script>
+      function executeSearch() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (query) {
+          window.location.href = `/search?q=${encodeURIComponent(query)}`;
+        }
+      }
+      document.getElementById('searchBtn').addEventListener('click', executeSearch);
+      document.getElementById('searchInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          executeSearch();
+        }
+      });
+
+      // Check auth state to update CTA buttons
+      fetch("http://localhost:5000/api/me", { credentials: "include" })
+        .then(res => {
+          if (res.ok) {
+            document.getElementById('nav-messages').style.display = '';
+            document.getElementById('nav-cart').style.display = '';
+            const navProfile = document.getElementById('nav-profile');
+            navProfile.setAttribute('href', '/profile');
+            navProfile.className = 'nav-link';
+            navProfile.removeAttribute('style');
+            navProfile.innerHTML = '<img src="user.svg" alt="Profile">';
+          }
+        })
+        .catch(err => console.error("Error checking auth status:", err));
+
+      // Set active nav item based on current URL
+      const currentPath = window.location.pathname;
+      const navLinks = document.querySelectorAll('.custom-navbar-nav .nav-link');
+      navLinks.forEach(link => {
+        if (link.getAttribute('href') === currentPath || (currentPath === '/index.html' && link.getAttribute('href') === '/')) {
+          link.parentElement.classList.add('active');
+        } else {
+          link.parentElement.classList.remove('active');
+        }
+      });
+    </script>
 
 
 
@@ -100,7 +140,7 @@
 						<div class="row links-wrap">
 							<div class="col-6 col-sm-6 col-md-3">
 								<ul class="list-unstyled">
-									<li><a href="sell.html">Sell</a></li>
+									<li><a href="/sell">Sell</a></li>
 									<li><a href="message.html">Messages</a></li>
 								</ul>
 							</div>

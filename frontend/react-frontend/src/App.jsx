@@ -1,4 +1,4 @@
-import { useState } from 'react'
+//import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import './App.css'
 
@@ -8,10 +8,16 @@ import Shop from './assets/pages/shop.jsx';
 import Favorites from './assets/pages/favorites.jsx';
 import Sell from './assets/pages/sell.jsx';
 import Product from './assets/pages/product.jsx';
+import Search from './assets/pages/search.jsx';
+
+//user stuff
+import Login from './assets/pages/login.jsx';
+import Signup from './assets/pages/signup.jsx';
+import Profile from './assets/pages/profile.jsx';
 
 
 function App() {
-  const [count, setCount] = useState(0)
+  //const [count, setCount] = useState(0)
 
   return (
     <BrowserRouter>
@@ -22,6 +28,13 @@ function App() {
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/sell" element={<Sell />} />
         <Route path="/product/:id" element={<Product />} />
+        <Route path="/search" element={<Search />} />
+
+        {/* user stuff */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/profile" element={<Profile />} />
+
 
         {/* <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} /> */}

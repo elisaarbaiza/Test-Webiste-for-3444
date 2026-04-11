@@ -69,6 +69,12 @@ async function initDb() {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Log incoming requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // CORS to allow frontend from Amplify/localhost to call this backend
 const allowedOrigins = [
   "http://localhost:3000",
@@ -113,10 +119,34 @@ async function getUserByEmail(email) {
 }
 
 //product getter
-async function getItems() {
-  const result = await pool.query(
-    `SELECT * FROM items`
-  );
+async function getItems(category, sort, search) {
+  let query = `SELECT * FROM items`;
+  const values = [];
+  const conditions = [];
+
+  if (category) {
+    values.push(category);
+    conditions.push(`category = $${values.length}`);
+  }
+
+  if (search) {
+    values.push(`%${search}%`);
+    conditions.push(`(title ILIKE $${values.length} OR description ILIKE $${values.length})`);
+  }
+
+  if (conditions.length > 0) {
+    query += ` WHERE ` + conditions.join(' AND ');
+  }
+
+  if (sort === 'asc') {
+    query += ` ORDER BY price ASC`;
+  } else if (sort === 'desc') {
+    query += ` ORDER BY price DESC`;
+  } else {
+    query += ` ORDER BY created_at DESC`;
+  }
+
+  const result = await pool.query(query, values);
   return result.rows;
 }
 
@@ -274,20 +304,20 @@ app.post("/signup", async (req, res) => {
   const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const verifyUrl = `${baseUrl}/verify?token=${token}`;
 
-  try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Verify your UNT email for Eagl'd",
-      text: `Click this link to verify your email: ${verifyUrl}`,
-    });
-  } catch (err) {
-    console.error("Error sending verification email:", err);
-    return res.status(500).json({ error: "Could not send verification email." });
-  }
+  // try {
+  //   await transporter.sendMail({
+  //     from: process.env.EMAIL_USER,
+  //     to: user.email,
+  //     subject: "Verify your UNT email for Eagl'd",
+  //     text: `Click this link to verify your email: ${verifyUrl}`,
+  //   });
+  // } catch (err) {
+  //   console.error("Error sending verification email:", err);
+  //   return res.status(500).json({ error: "Could not send verification email." });
+  // }
 
   res.json({
-    message: "Signup successful. Check your UNT email for a verification link.",
+    message: "Signup successful. DO NOT Check your UNT email for a verification link.",
   });
 });
 
@@ -310,9 +340,9 @@ app.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Invalid email or password." });
   }
 
-  if (!user.email_verified) {
-    return res.status(403).json({ error: "Please verify your UNT email before logging in." });
-  }
+  // if (!user.email_verified) {
+  //   return res.status(403).json({ error: "Please verify your UNT email before logging in." });
+  // }
 
   req.session.userId = user.id;
 
@@ -327,6 +357,24 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.json({ message: "Logged out." });
   });
+});
+
+// Get currently logged-in user
+app.get("/api/me", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Not logged in." });
+    }
+    const user = await getUserById(req.session.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+    // Return public user profile data
+    res.json({ id: user.id, email: user.email });
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+    res.status(500).json({ error: "Server error." });
+  }
 });
 
 // Email verification endpoint
@@ -437,9 +485,10 @@ app.get("/signup", (_req, res) => {
 });
 
 //PRODUCT STUFF
-app.get("/items", async (_req, res) => {
+app.get("/items", async (req, res) => {
   try {
-    const items = await getItems();
+    const { category, sort, search } = req.query;
+    const items = await getItems(category, sort, search);
     res.json(items);
   } catch (err) {
     console.error("Error fetching items:", err);
@@ -513,7 +562,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 const SKIP_DB_FOR_DEV = process.env.SKIP_DB_FOR_DEV === "true";
 
 function startServer() {
