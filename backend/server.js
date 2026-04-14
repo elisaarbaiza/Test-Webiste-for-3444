@@ -63,11 +63,40 @@ async function initDb() {
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      seller_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      image_url TEXT,
+      price NUMERIC(10, 2) NOT NULL,
+      is_sold BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS cart_items (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
 }
+
+const cartRoutes = require('./routes/cartRoutes');
+const productRoutes = require('./routes/productRoutes');
 
 // Parse JSON and form-encoded bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use('/cart', cartRoutes);
+app.use('/products', productRoutes);
 
 // Log incoming requests
 app.use((req, res, next) => {
