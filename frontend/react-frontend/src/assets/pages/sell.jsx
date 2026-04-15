@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom"; 
 import React, { useState } from 'react';
 
 function Sell() {
@@ -12,6 +11,12 @@ function Sell() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [myListings, setMyListings] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editCategory, setEditCategory] = useState("Textbooks");
+  const [editImageUrl, setEditImageUrl] = useState("");
 
   const fetchMyListings = async () => {
     try {
@@ -28,6 +33,7 @@ function Sell() {
 
   const handleViewListings = () => {
     setView('listings');
+    setEditingId(null);
     setError("");
     setSuccess("");
     fetchMyListings();
@@ -77,6 +83,87 @@ function Sell() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setEditTitle(item.title || "");
+    setEditDescription(item.description || "");
+    setEditPrice(item.price ?? "");
+    setEditCategory(item.category || "Textbooks");
+    setEditImageUrl(item.image_url || "");
+    setError("");
+    setSuccess("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const saveEdit = async (id) => {
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch(`http://localhost:5000/api/items/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+          image_url: editImageUrl || null,
+          price: Number(editPrice),
+          category: editCategory,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update listing.");
+      }
+      setSuccess("Listing updated.");
+      setEditingId(null);
+      fetchMyListings();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const markAsSold = async (id) => {
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch(`http://localhost:5000/api/items/${id}/mark-sold`, {
+        method: "PUT",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to mark listing as sold.");
+      }
+      setSuccess("Listing marked as sold.");
+      fetchMyListings();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const removeListing = async (id) => {
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch(`http://localhost:5000/api/items/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to remove listing.");
+      }
+      setSuccess("Listing removed.");
+      fetchMyListings();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -150,11 +237,85 @@ function Sell() {
               ) : (
                 myListings.map(item => (
                   <div className="col-12 col-md-4 col-lg-3 mb-5" key={item.id}>
-                    <Link className="product-item" to={`/product/${item.id}`}>
+                    <div className="product-item h-100">
                       <img src={item.image_url || "/books.png"} className="img-fluid product-thumbnail mb-3" alt={item.title} />
                       <h3 className="product-title">{item.title}</h3>
                       <strong className="product-price">${Number(item.price).toFixed(2)}</strong>
-                    </Link>
+                      <div className="mt-2">
+                        {item.is_sold ? (
+                          <span className="badge bg-secondary">Sold</span>
+                        ) : (
+                          <span className="badge bg-success">Active</span>
+                        )}
+                      </div>
+
+                      {editingId === item.id ? (
+                        <div className="mt-3">
+                          <input
+                            type="text"
+                            className="form-control mb-2"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            placeholder="Title"
+                          />
+                          <textarea
+                            className="form-control mb-2"
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            placeholder="Description"
+                            rows="3"
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="form-control mb-2"
+                            value={editPrice}
+                            onChange={(e) => setEditPrice(e.target.value)}
+                            placeholder="Price"
+                          />
+                          <select
+                            className="form-select mb-2"
+                            value={editCategory}
+                            onChange={(e) => setEditCategory(e.target.value)}
+                          >
+                            <option value="Textbooks">Textbooks</option>
+                            <option value="Clothes">Clothes</option>
+                            <option value="Furniture">Furniture</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          <input
+                            type="text"
+                            className="form-control mb-2"
+                            value={editImageUrl}
+                            onChange={(e) => setEditImageUrl(e.target.value)}
+                            placeholder="Image URL"
+                          />
+                          <div className="d-flex gap-2">
+                            <button type="button" className="btn btn-sm btn-primary" onClick={() => saveEdit(item.id)}>
+                              Save
+                            </button>
+                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={cancelEdit}>
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="d-flex flex-wrap gap-2 mt-3">
+                          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => startEdit(item)}>
+                            Edit
+                          </button>
+                          {!item.is_sold && (
+                            <button type="button" className="btn btn-sm btn-outline-success" onClick={() => markAsSold(item.id)}>
+                              Mark Sold
+                            </button>
+                          )}
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeListing(item.id)}>
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))
               )}

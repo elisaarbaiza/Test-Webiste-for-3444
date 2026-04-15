@@ -600,6 +600,80 @@ app.get("/api/my-items", requireLogin, async (req, res) => {
   }
 });
 
+// Update one of the logged-in user's items
+app.put("/api/items/:id", requireLogin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, image_url, price, category } = req.body || {};
+
+    const result = await pool.query(
+      `UPDATE items
+       SET title = $1,
+           description = $2,
+           image_url = $3,
+           price = $4,
+           category = $5
+       WHERE id = $6 AND seller_id = $7
+       RETURNING *`,
+      [title, description, image_url, price, category, id, req.user.id],
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: "Item not found." });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error updating item:", err);
+    res.status(500).json({ error: "Failed to update item." });
+  }
+});
+
+// Mark one of the logged-in user's items as sold
+app.put("/api/items/:id/mark-sold", requireLogin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `UPDATE items
+       SET is_sold = TRUE
+       WHERE id = $1 AND seller_id = $2
+       RETURNING *`,
+      [id, req.user.id],
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: "Item not found." });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error marking item as sold:", err);
+    res.status(500).json({ error: "Failed to mark item as sold." });
+  }
+});
+
+// Delete one of the logged-in user's items
+app.delete("/api/items/:id", requireLogin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `DELETE FROM items
+       WHERE id = $1 AND seller_id = $2
+       RETURNING id`,
+      [id, req.user.id],
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: "Item not found." });
+    }
+
+    res.json({ message: "Item deleted." });
+  } catch (err) {
+    console.error("Error deleting item:", err);
+    res.status(500).json({ error: "Failed to delete item." });
+  }
+});
+
 // Add an item to favorites
 app.post("/api/favorites/:itemId", requireLogin, async (req, res) => {
   try {
