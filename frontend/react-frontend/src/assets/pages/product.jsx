@@ -110,7 +110,8 @@ function Product() {
               <div className="col-md-6">
                 <h2 className="display-5 text-black mb-3">{item.title}</h2>
                 <h3 className="product-price text-primary mb-4">${Number(item.price).toFixed(2)}</h3>
-                {item.category && <p className="text-muted mb-4"><strong>Category:</strong> {item.category}</p>}
+                {item.category && <p className="text-muted mb-2"><strong>Category:</strong> {item.category}</p>}
+                <p className="text-muted mb-4"><strong>Seller:</strong> {item.seller_username || "Unknown"}</p>
                 <p className="lead">{item.description || "No description provided."}</p>
                 <button className="btn btn-primary mt-4">Contact Seller</button>
                 {user && (

@@ -39,6 +39,15 @@ async function initDb() {
   await pool.query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_items INTEGER[] DEFAULT ARRAY[]::INTEGER[];
   `);
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+  `);
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique_idx ON users(username) WHERE username IS NOT NULL;
+  `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS items (
@@ -149,7 +158,10 @@ function isUntEmail(email) {
 
 async function getUserById(id) {
   const result = await pool.query(
-    `SELECT id, email, password_hash, email_verified, favorite_items FROM users WHERE id = $1 LIMIT 1`,
+    `SELECT id, email, username, bio, password_hash, email_verified, favorite_items
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
     [id],
   );
   return result.rows[0] || null;
@@ -157,7 +169,7 @@ async function getUserById(id) {
 
 async function getUserByEmail(email) {
   const result = await pool.query(
-    `SELECT id, email, password_hash, email_verified, favorite_items
+    `SELECT id, email, username, bio, password_hash, email_verified, favorite_items
      FROM users
      WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
      LIMIT 1`,
@@ -166,20 +178,31 @@ async function getUserByEmail(email) {
   return result.rows[0] || null;
 }
 
+async function getUserByUsername(username) {
+  const result = await pool.query(
+    `SELECT id, email, username, bio, password_hash, email_verified, favorite_items
+     FROM users
+     WHERE LOWER(TRIM(username)) = LOWER(TRIM($1))
+     LIMIT 1`,
+    [username],
+  );
+  return result.rows[0] || null;
+}
+
 //product getter
 async function getItems(category, sort, search) {
-  let query = `SELECT * FROM items`;
+  let query = `SELECT i.*, COALESCE(NULLIF(u.username, ''), SPLIT_PART(u.email, '@', 1), 'user-' || u.id::TEXT) AS seller_username FROM items i JOIN users u ON u.id = i.seller_id`;
   const values = [];
   const conditions = [];
 
   if (category) {
     values.push(category);
-    conditions.push(`category = $${values.length}`);
+    conditions.push(`i.category = $${values.length}`);
   }
 
   if (search) {
     values.push(`%${search}%`);
-    conditions.push(`(title ILIKE $${values.length} OR description ILIKE $${values.length})`);
+    conditions.push(`(i.title ILIKE $${values.length} OR i.description ILIKE $${values.length})`);
   }
 
   if (conditions.length > 0) {
@@ -187,11 +210,11 @@ async function getItems(category, sort, search) {
   }
 
   if (sort === 'asc') {
-    query += ` ORDER BY price ASC`;
+    query += ` ORDER BY i.price ASC`;
   } else if (sort === 'desc') {
-    query += ` ORDER BY price DESC`;
+    query += ` ORDER BY i.price DESC`;
   } else {
-    query += ` ORDER BY created_at DESC`;
+    query += ` ORDER BY i.created_at DESC`;
   }
 
   const result = await pool.query(query, values);
@@ -200,7 +223,11 @@ async function getItems(category, sort, search) {
 
 async function getItemById(id) {
   const result = await pool.query(
-    `SELECT * FROM items WHERE id = $1 LIMIT 1`,
+    `SELECT i.*, COALESCE(NULLIF(u.username, ''), SPLIT_PART(u.email, '@', 1), 'user-' || u.id::TEXT) AS seller_username
+     FROM items i
+     JOIN users u ON u.id = i.seller_id
+     WHERE i.id = $1
+     LIMIT 1`,
     [id]
   );
   return result.rows[0] || null;
@@ -218,7 +245,11 @@ async function createItem(seller_id, title, description, price, category, image_
 
 async function getItemsBySellerId(seller_id) {
   const result = await pool.query(
-    `SELECT * FROM items WHERE seller_id = $1 ORDER BY created_at DESC`,
+    `SELECT i.*, COALESCE(NULLIF(u.username, ''), SPLIT_PART(u.email, '@', 1), 'user-' || u.id::TEXT) AS seller_username
+     FROM items i
+     JOIN users u ON u.id = i.seller_id
+     WHERE i.seller_id = $1
+     ORDER BY i.created_at DESC`,
     [seller_id]
   );
   return result.rows;
@@ -248,8 +279,10 @@ async function removeFavoriteItem(userId, itemId) {
 
 async function getFavoriteItems(userId) {
   const result = await pool.query(
-    `SELECT i.* FROM items i
+    `SELECT i.*, COALESCE(NULLIF(s.username, ''), SPLIT_PART(s.email, '@', 1), 'user-' || s.id::TEXT) AS seller_username
+     FROM items i
      JOIN users u ON i.id = ANY(u.favorite_items)
+     JOIN users s ON s.id = i.seller_id
      WHERE u.id = $1`,
     [userId]
   );
@@ -357,10 +390,10 @@ async function requireLogin(req, res, next) {
 
 // Sign up with UNT email
 app.post("/signup", async (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, password, username, bio } = req.body || {};
 
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required." });
+  if (!email || !password || !username) {
+    return res.status(400).json({ error: "Email, username, and password are required." });
   }
 
   if (!isUntEmail(email)) {
@@ -369,25 +402,41 @@ app.post("/signup", async (req, res) => {
       .json({ error: "You must use a UNT email (@my.unt.edu or @unt.edu)." });
   }
 
+  const trimmedUsername = String(username).trim();
+  if (!/^[a-zA-Z0-9_]{3,30}$/.test(trimmedUsername)) {
+    return res
+      .status(400)
+      .json({ error: "Username must be 3-30 characters and only contain letters, numbers, or underscores." });
+  }
+
+  const usernameOwner = await getUserByUsername(trimmedUsername);
   const passwordHash = await bcrypt.hash(password, 10);
   const normalizedEmail = email.trim().toLowerCase();
+  const normalizedBio = String(bio || "").trim() || null;
   let user = await getUserByEmail(normalizedEmail);
+
+  if (usernameOwner && (!user || usernameOwner.id !== user.id)) {
+    return res.status(400).json({ error: "Username is already taken." });
+  }
 
   if (!user) {
     const insertResult = await pool.query(
-      `INSERT INTO users (email, password_hash, email_verified)
-       VALUES ($1, $2, false)
-       RETURNING id, email, password_hash, email_verified`,
-      [normalizedEmail, passwordHash],
+      `INSERT INTO users (email, username, bio, password_hash, email_verified)
+       VALUES ($1, $2, $3, $4, false)
+       RETURNING id, email, username, bio, password_hash, email_verified`,
+      [normalizedEmail, trimmedUsername, normalizedBio, passwordHash],
     );
     user = insertResult.rows[0];
   } else {
     const updateResult = await pool.query(
       `UPDATE users
-       SET password_hash = $1, email_verified = false
-       WHERE id = $2
-       RETURNING id, email, password_hash, email_verified`,
-      [passwordHash, user.id],
+       SET username = $1,
+           bio = $2,
+           password_hash = $3,
+           email_verified = false
+       WHERE id = $4
+       RETURNING id, email, username, bio, password_hash, email_verified`,
+      [trimmedUsername, normalizedBio, passwordHash, user.id],
     );
     user = updateResult.rows[0];
     await pool.query(`DELETE FROM verification_tokens WHERE user_id = $1`, [user.id]);
@@ -447,6 +496,8 @@ app.post("/login", async (req, res) => {
   res.json({
     message: "Logged in successfully.",
     email: user.email,
+    username: user.username,
+    bio: user.bio,
   });
 });
 
@@ -468,10 +519,45 @@ app.get("/api/me", async (req, res) => {
       return res.status(404).json({ error: "User not found." });
     }
     // Return public user profile data
-    res.json({ id: user.id, email: user.email, favorite_items: user.favorite_items || [] });
+    res.json({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      bio: user.bio,
+      favorite_items: user.favorite_items || [],
+    });
   } catch (err) {
     console.error("Error fetching profile:", err);
     res.status(500).json({ error: "Server error." });
+  }
+});
+
+// Update currently logged-in user's profile fields
+app.put("/api/me", requireLogin, async (req, res) => {
+  try {
+    const { bio } = req.body || {};
+    const normalizedBio = String(bio || "").trim();
+
+    if (normalizedBio.length > 500) {
+      return res.status(400).json({ error: "Bio must be 500 characters or fewer." });
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+       SET bio = $1
+       WHERE id = $2
+       RETURNING id, email, username, bio, favorite_items`,
+      [normalizedBio || null, req.user.id],
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    res.status(500).json({ error: "Failed to update profile." });
   }
 });
 

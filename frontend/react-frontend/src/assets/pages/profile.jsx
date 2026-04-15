@@ -5,6 +5,9 @@ function Profile() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [bioDraft, setBioDraft] = useState("");
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -17,6 +20,7 @@ function Profile() {
         }
         const data = await res.json();
         setUser(data);
+        setBioDraft(data.bio || "");
       } catch (err) {
         setError(err.message);
       } finally {
@@ -39,6 +43,34 @@ function Profile() {
     }
   };
 
+  const handleSaveBio = async () => {
+    try {
+      setSaveLoading(true);
+      setSaveMessage("");
+      setError("");
+
+      const res = await fetch("http://localhost:5000/api/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ bio: bioDraft }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update bio.");
+      }
+
+      setUser(data);
+      setBioDraft(data.bio || "");
+      setSaveMessage("Bio updated.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="container" style={{ maxWidth: '500px', marginTop: '60px' }}>
@@ -54,7 +86,30 @@ function Profile() {
               </div>
             ) : (
               <>
+                <p className="mb-2"><strong>Username:</strong> <span>{user.username || "Not set"}</span></p>
                 <p className="mb-2"><strong>Email:</strong> <span>{user.email}</span></p>
+                <div className="mb-2">
+                  <strong>Bio:</strong>
+                  <textarea
+                    className="form-control mt-2"
+                    rows="3"
+                    maxLength="500"
+                    value={bioDraft}
+                    onChange={(e) => setBioDraft(e.target.value)}
+                    placeholder="Tell people a little about yourself..."
+                  />
+                  <small className="text-muted">{bioDraft.length}/500 characters</small>
+                  <div className="mt-2">
+                    <button
+                      onClick={handleSaveBio}
+                      className="btn btn-sm btn-primary"
+                      disabled={saveLoading}
+                    >
+                      {saveLoading ? "Saving..." : "Save Bio"}
+                    </button>
+                  </div>
+                  {saveMessage && <p className="text-success mt-2 mb-0">{saveMessage}</p>}
+                </div>
                 <p className="mb-4"><strong>User ID:</strong> <span>{user.id}</span></p>
                 <button onClick={handleLogout} className="btn btn-danger">Log out</button>
               </>

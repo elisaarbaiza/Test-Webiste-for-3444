@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 
 function Register() {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ function Register() {
       const res = await fetch("http://localhost:5000/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, username, bio, password }),
       });
 
       const data = await res.json();
@@ -35,6 +37,8 @@ function Register() {
 
       setSuccess(data.message);
       setEmail("");
+      setUsername("");
+      setBio("");
       setPassword("");
       setPasswordConfirm("");
     } catch (err) {
@@ -56,6 +60,30 @@ function Register() {
 					  <label htmlFor="signupEmail" className="form-label">UNT Email</label>
 					  <input type="email" className="form-control" id="signupEmail" placeholder="you@my.unt.edu" required value={email} onChange={(e) => setEmail(e.target.value)} />
 				  </div>
+          <div className="mb-3">
+            <label htmlFor="signupUsername" className="form-label">Username</label>
+            <input
+              type="text"
+              className="form-control"
+              id="signupUsername"
+              placeholder="e.g. eagle_seller23"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <small className="text-muted">3-30 characters: letters, numbers, and underscore.</small>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="signupBio" className="form-label">Bio (optional)</label>
+            <textarea
+              className="form-control"
+              id="signupBio"
+              rows="3"
+              placeholder="Tell others what you usually sell..."
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+            />
+          </div>
 				  <div className="mb-3">
 					  <label htmlFor="signupPassword" className="form-label">Password</label>
 					  <input type="password" className="form-control" id="signupPassword" required value={password} onChange={(e) => setPassword(e.target.value)} />

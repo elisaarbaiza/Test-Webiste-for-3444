@@ -241,6 +241,7 @@ function Sell() {
                       <img src={item.image_url || "/books.png"} className="img-fluid product-thumbnail mb-3" alt={item.title} />
                       <h3 className="product-title">{item.title}</h3>
                       <strong className="product-price">${Number(item.price).toFixed(2)}</strong>
+                      <p className="text-muted small mb-0">Seller: {item.seller_username || "Unknown"}</p>
                       <div className="mt-2">
                         {item.is_sold ? (
                           <span className="badge bg-secondary">Sold</span>

@@ -67,6 +67,7 @@ function Search() {
                 <img src={item.image_url || "books.png"} className="img-fluid product-thumbnail" alt={item.title} />
                     <h3 className="product-title">{item.title}</h3>
                     <strong className="product-price">${Number(item.price).toFixed(2)}</strong>
+                    <p className="text-muted small mb-0">Seller: {item.seller_username || "Unknown"}</p>
                   </Link>
                 </div>
               ))
