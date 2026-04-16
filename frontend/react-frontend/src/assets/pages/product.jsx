@@ -116,7 +116,8 @@ function Product() {
                 <button className="btn btn-primary mt-4">Contact Seller</button>
                 {user && (
                   <button className={`btn ${isFavorite ? 'btn-success' : 'btn-outline-success'} mt-4 ms-2`} onClick={handleFavoriteToggle} disabled={favoriteLoading}>
-                    {isFavorite ? '★ Favorited' : '☆ Add to Favorites'}
+                    <i className="fa-solid fa-heart me-2" aria-hidden="true"></i>
+                    {isFavorite ? 'Favorited' : 'Add to Favorites'}
                   </button>
                 )}
               </div>
