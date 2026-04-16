@@ -4,8 +4,8 @@ https://main.d3b9nx7tb3jlu.amplifyapp.com/main.html
 
 
 ## HOW TO RUN ON MAC
-1. On one terminal, type NPM START
-2. On another terminal, make sure you are in the "frontend/react-frontend" folder, type npm web dev
+1. On one terminal, type npm start
+2. On another terminal, make sure you are in the "frontend/react-frontend" folder, type npm run dev
 
 ## MAC TROUBLESHOOT
 MAKE SURE AIRPLAY IS TURNED OFF ON SETTINGS
