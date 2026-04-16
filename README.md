@@ -16,7 +16,7 @@ When running Postgres, if you get error saying port 5432 is already running:
 4. Now type the commands show under "HOW TO RUN ON MAC"
 
 ## Another fix for MAC error:
-In .env, ensure that it only has the following:
+In the ".env" file, ensure that it only has the following:
 1. PORT=5000
 2. DATABASE_URL=postgresql://[USERNAME]:[PASSWORD]@localhost:5432/[DATABASE_NAME]
 3. DATABASE_SSL=false
