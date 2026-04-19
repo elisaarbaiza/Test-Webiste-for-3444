@@ -10,7 +10,7 @@ https://main.d3b9nx7tb3jlu.amplifyapp.com/main.html
 3. On another terminal, make sure you are in the "frontend/react-frontend" folder, type "npm run dev"
 
 ## MAC TROUBLESHOOT
-MAKE SURE AIRPLAY IS TURNED OFF ON SETTINGS
+MAKE SURE AIRPLAY IS TURNED OFF ON SETTINGS (This is due to Airplay automatically using Port 5000)
 ![Airplay](images/airplay.png)
 When running Postgres, if you get error saying port 5432 is already running:
 1. In VScode, type sudo lsof -i :5432
