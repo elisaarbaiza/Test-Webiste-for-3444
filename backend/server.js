@@ -180,8 +180,13 @@ async function initDb() {
       sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       text TEXT NOT NULL,
+      read_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
+  `);
+  await pool.query(`
+    ALTER TABLE chat_messages
+    ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;
   `);
 }
 
@@ -473,6 +478,17 @@ async function createChatMessage(conversationId, senderId, receiverId, text) {
   };
 }
 
+async function markConversationAsRead(conversationId, userId) {
+  await pool.query(
+    `UPDATE chat_messages
+     SET read_at = NOW()
+     WHERE conversation_id = $1
+       AND receiver_id = $2
+       AND read_at IS NULL`,
+    [conversationId, userId]
+  );
+}
+
 async function listChatContactsForUser(userId) {
   const result = await pool.query(
     `SELECT
@@ -481,7 +497,9 @@ async function listChatContactsForUser(userId) {
        u.username,
        u.bio,
        lm.text AS last_message,
+       lm.sender_id AS last_message_sender_id,
        lm.created_at AS last_message_at,
+       COALESCE(unread.unread_count, 0) AS unread_count,
        CASE
          WHEN EXISTS (SELECT 1 FROM items i WHERE i.seller_id = u.id) THEN 'seller'
          ELSE 'buyer'
@@ -492,12 +510,19 @@ async function listChatContactsForUser(userId) {
        ELSE c.user_one_id
      END
      LEFT JOIN LATERAL (
-       SELECT cm.text, cm.created_at
+       SELECT cm.text, cm.sender_id, cm.created_at
        FROM chat_messages cm
        WHERE cm.conversation_id = c.id
        ORDER BY cm.created_at DESC
        LIMIT 1
      ) lm ON TRUE
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS unread_count
+       FROM chat_messages cm
+       WHERE cm.conversation_id = c.id
+         AND cm.receiver_id = $1
+         AND cm.read_at IS NULL
+     ) unread ON TRUE
      WHERE c.user_one_id = $1 OR c.user_two_id = $1
      ORDER BY COALESCE(NULLIF(u.username, ''), SPLIT_PART(u.email, '@', 1)) ASC`,
     [userId]
@@ -706,7 +731,9 @@ app.get("/api/chat/contacts", requireLogin, async (req, res) => {
         role: contact.role || "buyer",
         bio: contact.bio,
         lastMessage: contact.last_message || "",
+        lastMessageSenderId: contact.last_message_sender_id || null,
         lastMessageAt: contact.last_message_at || null,
+        unreadCount: Number(contact.unread_count || 0),
       };
     });
 
@@ -734,6 +761,7 @@ app.get("/api/chat/conversations/:otherUserId", requireLogin, async (req, res) =
     return res.status(400).json({ error: "Invalid conversation." });
   }
 
+  await markConversationAsRead(convo.id, req.user.id);
   const messages = await getConversationMessages(convo.id);
   res.json({
     conversationId: convo.id,
@@ -762,6 +790,7 @@ app.post("/api/chat/open/:otherUserId", requireLogin, async (req, res) => {
   if (!convo) {
     return res.status(400).json({ error: "Invalid conversation." });
   }
+  await markConversationAsRead(convo.id, req.user.id);
 
   const roleResult = await pool.query(
     `SELECT CASE
@@ -1268,6 +1297,7 @@ io.on("connection", (socket) => {
         socket.join(roomId);
         socket.data.currentUser = currentUserId;
         socket.data.currentConversationId = convo.id;
+        await markConversationAsRead(convo.id, currentUserId);
 
         socket.emit("conversation joined", {
           conversationId: convo.id,
