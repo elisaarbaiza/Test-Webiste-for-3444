@@ -37,17 +37,21 @@ export default function Checkout() {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("eagld_cart");
-      const parsed = stored ? JSON.parse(stored) : [];
-      if (parsed.length === 0) {
-        setCartEmpty(true);
-      } else {
-        setOrderItems(parsed);
-      }
-    } catch {
-      setCartEmpty(true);
-    }
+    fetch("/api/cart", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!Array.isArray(data) || data.length === 0) {
+          setCartEmpty(true);
+        } else {
+          setOrderItems(data.map((item) => ({
+            id: item.id,
+            name: item.title,
+            price: parseFloat(item.price),
+            quantity: item.quantity,
+          })));
+        }
+      })
+      .catch(() => setCartEmpty(true));
   }, []);
 
   const orderTotal = orderItems.reduce(
